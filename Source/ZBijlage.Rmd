@@ -1,0 +1,67 @@
+# Bijlagen
+
+## Vlinders
+
+```{r TellingenTaakVlinders, message= FALSE, warning= FALSE, results= 'asis'}
+
+overzicht_taken_alle_long_2017 <- overzicht_taken_alle_long %>%
+  filter(jaar == "2017") %>%
+  ungroup() %>%
+  mutate(taak_kort = ifelse(substring(taak,1,15) == "Transecttelling",paste("Telling",substring(taak,17,17)), taak))
+
+vlinders <- overzicht_taken_alle_long %>%
+  filter((soortgroep == "vlinders") & (jaar == 2017)) %>%
+  select(meetnet) %>%
+  unique()
+
+vlinder <- vlinders$meetnet[1]
+
+for(vlinder in vlinders$meetnet){
+  taken_vlinder <- overzicht_taken_alle_long_2017 %>%
+    filter(meetnet == vlinder) 
+  
+  locaties_vlinder_alle <- taken_vlinder %>%
+    select(meetnet, locatie) %>%
+    unique()
+  
+  taken_vlinder_wide <- taken_vlinder %>%
+    filter(aantalTellingen > 0) %>%
+    select(-taak) %>%
+    spread(key = taak_kort, value = aantalTellingen, fill = 0) %>%
+    right_join(locaties_vlinder_alle, by =c( "meetnet", "locatie"))
+  
+ taken_vlinder_wide$bezoek_status <- ifelse(is.na(taken_vlinder_wide$bezoek_status), "Geen invoer", taken_vlinder_wide$bezoek_status)
+  
+  taken_vlinder_wide[is.na(taken_vlinder_wide)] <- 0
+  
+  taken_vlinder_wide <- taken_vlinder_wide %>%
+    rename(Locatie = locatie, "Bezoek status" = bezoek_status)
+  
+  nRow <- nrow(taken_vlinder_wide)
+  
+  # if(nRow > 30){
+    taken_vlinder_wide %>%
+    select(-soortgroep, - meetnet, -werkpakket, -jaar) %>%
+    kable(caption = vlinder, format = "html") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), font_size = 11) %>%
+    row_spec(0,  bold = TRUE) %>%
+     #kable_styling("repeat_header") %>%
+    #collapse_rows(columns = 1) %>%
+    print()
+  # } else {
+  #   taken_vlinder_wide %>%
+  #   select(-soortgroep, - meetnet, -werkpakket, -jaar) %>%
+  #   kable(caption = vlinder, booktabs = T, format = "html") %>%
+  #  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))  %>%
+  #   row_spec(0,  bold = TRUE) %>%
+  #   collapse_rows(columns = 1) %>%
+  #   print()
+  # }
+  
+  
+
+}
+
+
+
+```
