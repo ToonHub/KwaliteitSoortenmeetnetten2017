@@ -1,0 +1,298 @@
+# Vlinders
+
+## Meetnetkarakteristieken
+
+Tabel \@ref(tab:MeetnKaraktvlinders1) en Tabel \@ref(tab:MeetnKaraktvlinders2) geven een overzicht van de karakteristieken van de vlindermeetnetten (Maes et al.2015).
+
+```{r MeetnKaraktvlinders1, message= FALSE, warning= FALSE, results= 'asis'}
+
+bezoeken_vlinders <- filter(bezoeken, soortgroep == "vlinders")
+vlinders <- unique(bezoeken_vlinders$meetnet)
+
+meetnetKarakt %>%
+  filter(Soortengroep == "Vlinders") %>%
+  select(Meetnet, Protocol, Type, Meetnetlocaties, 'Meetcyclus (jaar)'= Meetcyclus, Start = Opstartjaar) %>%
+  unique() %>%
+  kable(caption = "Overzicht van de karakteristieken van de vlindermeetnetten: veldprotocol, type meetnet (integraal of steekproef), aantal meetnetlocaties en de meetcyclus in jaren", 
+        row.names = FALSE, 
+        booktabs = TRUE,
+        format = "html") %>%
+  kable_styling() %>%
+  column_spec(5, width = "2cm")
+  
+```
+
+
+```{r MeetnKaraktvlinders2, message= FALSE, warning= FALSE, results= 'asis'}
+
+meetnetKarakt %>%
+  filter(Soortengroep == "Vlinders") %>%
+  select(Meetnet, Generatie, 'Bezoeken (/jaar)' = Bezoeken, 'Begin telperiode' = Begin_telperiode, 'Einde telperiode' = Einde_telperiode) %>%
+  unique() %>%
+  kable(caption = "Overzicht van de karakteristieken van de vlindermeetnetten: aantal bezoeken per jaar, begin en einde van de telperiode", row.names = FALSE, booktabs = TRUE, format = "html") %>%
+  kable_styling() %>%
+  column_spec(1, width = "2cm") %>%
+  column_spec(4, width = "2cm") %>%
+  column_spec(5, width = "2cm") %>%
+ # column_spec(6, width = "2cm")%>%
+  collapse_rows(columns = 1)
+
+```
+
+
+## Overzicht van de uitgevoerde tellingen
+
+### Aantal tellingen en taken
+
+In bijlage wordt per meetnetloctie een overzicht gegeven van de uitgevoerde taken.
+
+Tabel \@ref(tab:overzichtTellingenvlinders) geeft een overzicht per meetnet. In de tabel onderscheiden we het aantal bezochte locaties (dit zijn locaties waar minstens eenmaal werd geteld) en het aantal voldoende getelde locaties (dit zijn de locaties waar het aantal tellingen werd gehaald binnen de afgesproken telperiode.  
+Tabel \@ref(tab:overzichtTellingenvlinders) geeft ook de doelen die werden voorop gesteld voor 2016 en 2017.
+
+```{r overzichtTellingenvlinders, message= FALSE, warning= FALSE, results= 'asis'}
+
+tabel_meetnetten %>%
+   filter(soortgroep == "vlinders") %>%
+  select(-soortgroep) %>%
+  kable(booktabs = TRUE, caption = "Overzicht van de tellingen voor de vlindermeetnetten en de vooropgestelde doelen", format = "html") %>%
+ #◘ able_styling() %>%
+    column_spec(4, width = "2cm") %>%
+  column_spec(5, width = "2cm") %>%
+  column_spec(6, width = "2cm") %>%
+  column_spec(7, width = "2cm") %>%
+  collapse_rows(columns = 1)
+  
+```
+
+### Tijdstippen van de tellingen
+
+Figuur \@ref(fig:figuurBezoekenvlinders) geeft een overzicht van de tijdstippen van de bezoeken.   
+
+```{r figuurBezoekenvlinders, message= FALSE, warning= FALSE, fig.height= 7, fig.width= 6.5,  fig.cap = "Overzicht tijdstippen waarop tellingen werden uitgevoerd in 2017" }
+
+bezoeken %>% 
+  filter(soortgroep == "vlinders") %>% 
+  filter(jaar == "2017") %>% 
+  select(meetnet,locatie, datum,  bezoek_status) %>%
+  unique() %>%
+  ggplot(aes(x = datum, fill = bezoek_status)) + 
+  geom_histogram(binwidth = 7, colour = "white") + 
+  facet_wrap( ~ meetnet, scales = "free_x", nrow = 3) + 
+  labs(x = "Datum bezoek", y = "Aantal bezoeken")  + 
+  theme( axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+### Afwijkingen van het protocol
+
+De volgende tabel geeft een overzicht van de afwijkingen van het protocol.
+
+```{r afwijkingenProtocol, message= FALSE, warning= FALSE}
+
+
+bezoeken %>% 
+  filter(soortgroep == "vlinders") %>% 
+  filter(jaar == "2017") %>% 
+  filter(bezoek_status != "TellingCP") %>% 
+  select(meetnet, datum, locatie, "bezoek status" = bezoek_status, notes) %>%
+  mutate(notes = gsub("\n", ". ",notes)) %>%
+  kable(booktabs = TRUE, escape = TRUE) %>%
+  kable_styling(latex_options =  c( "hold_position")) %>%
+    column_spec(5, width = "4cm")
+  
+
+
+```
+
+### Aantallen
+
+```{r verkenningAantallenVlinders, message=FALSE, warning= FALSE}
+
+aantallen_vlinders <- aantallen %>%
+  filter(soortgroep == "vlinders" & meetnet!="" & soort!="")
+
+aantallen_vlinders$sectie <- as.numeric(substring(aantallen_vlinders$sublocatie,7))
+
+aantallen_vlinders_bezoek <- summarise(group_by(aantallen_vlinders,meetnet,locatie, jaar, sectie),
+                                       aantalGemiddeld = mean(aantal, na.rm =TRUE),
+                                       aantalTotaal = sum(aantal, na.rm =TRUE),
+                                       aantalTellingen = n())
+
+aantallen_vlinders_bezoek$VoldoendeGeteld <- ifelse(aantallen_vlinders_bezoek$meetnet %in%  c("Klaverblauwtje","Argusvlinder", "Bruin dikkopje"), 
+                                                    ifelse(aantallen_vlinders_bezoek$aantalTellingen >= 6, "ja","nee"),    
+                                                    ifelse(aantallen_vlinders_bezoek$aantalTellingen >=3, "ja","nee"))
+
+vlinders_transecten <- unique(aantallen[aantallen$protocol == "vlinders transecten",]$meetnet)
+```
+
+#### Aantal getelde secties per transect
+
+Voor de vlinders die via transecten worden opgevolgd verkennen we eerst het aantal 50 meter-secties per transect en het aantal tellingen per sectie. In figuur \@ref(fig:figuurSectiesVlinders) en figuur \@ref(fig:figuurSectiesVlinders2) stelt elke rij een transect voor. Elk hok geeft een sectie weer van ongeveer 50 meter. De kleur geeft aan of een sectie al dan niet voldoende werd geteld. De transecten zijn maximaal 1 kilometer lang, maar voor kleine populaties zijn enkel korte transecten haalbaar.
+
+```{r figuurSectiesVlinders, message=FALSE, warning= FALSE, fig.width= 6.5, fig.height= 10, fig.cap = "Aantal tellingen per sectie en per jaar voor de verschillende vlindertransecten - Veldparelmoervlinder, Argusvlinder,   Heivlinder, Kommavlinder" }
+
+aantallen_vlinders_bezoek %>%
+  filter(meetnet %in%  c("Veldparelmoervlinder", "Argusvlinder",  "Heivlinder", "Kommavlinder"))%>%
+  #filter(jaar == "2017") %>%
+  ggplot(aes(x= sectie, y = factor(locatie), fill = VoldoendeGeteld)) + 
+  geom_tile(colour = "black" ) + 
+  facet_grid(meetnet ~ jaar , scales = "free_y", space = "free" ) + 
+  labs (x = "Sectienummer", y = "Transecten") + 
+  theme(#axis.text.y=element_blank(),
+ #       axis.ticks.y=element_blank() , 
+        legend.position = "bottom")
+
+```
+
+```{r figuurSectiesVlinders2, message=FALSE, warning= FALSE, fig.width= 7, fig.height= 6, fig.cap = "Aantal getelde secties voor de verschillende vlindertransecten - Aardbeivlinder, Klaverblauwtje,  Bruin dikkopje en Oranje zandoogje" }
+
+aantallen_vlinders_bezoek %>%
+  filter(meetnet %in%  c("Aardbeivlinder", "Klaverblauwtje",  "Bruin dikkopje", "Oranje zandoogje") )%>%
+  #filter(jaar == "2017") %>%
+  ggplot(aes(x= sectie, y = factor(locatie), fill = VoldoendeGeteld)) + 
+  geom_tile(colour = "black" ) + 
+  facet_grid(meetnet ~ jaar , scales = "free_y", space = "free" ) + 
+  labs (x = "Sectienummer", y = "Transecten") + 
+  theme(#axis.text.y=element_blank(),
+ #       axis.ticks.y=element_blank() , 
+        legend.position = "bottom",
+        strip.text.y = element_text(angle = 0))
+  
+
+```
+#### Overzicht totale aantallen per bezoek
+
+
+```{r verkenningAantallenVlinders3, message=FALSE, warning= FALSE, fig.width= 5, fig.height= 5}
+
+aantallen_vlinders_locatie <- aantallen_vlinders %>%
+  group_by(meetnet,protocol,locatie,datum, jaar, taak, bezoek_status) %>%
+  summarise(aantalGemiddeld = mean(aantal, na.rm =TRUE),
+            aantalTotaal = sum(aantal, na.rm =TRUE),
+            aantalSectiesGeteld = sum(!is.na(aantal)),
+            aantalPerKilometer =mean(aantal, na.rm =TRUE) * 20)
+
+aantallen_vlinders_locatie$Nulwaarneming <- ifelse(aantallen_vlinders_locatie$aantalTotaal == 0, "Ja", "Nee" )                                     
+```
+
+
+Onderstaande figuren tonen de verdeling van de getelde aantallen per bezoek. Voor de transecttellingen gaat het over het totaal getelde aantal per bezoek over alle secties van het transect. Voor de eitetellingen gaat het over het totaal getelde aantal per proefvlak. 
+
+```{r figuurAantallenVlinders2016, message=FALSE, warning= FALSE, fig.width= 5, fig.height= 3.5, fig.cap= paste("Verdeling van totaal getelde aantallen per bezoek",vlinders_2016, sep = " - ")}
+
+vlinders_2016 <- c("Veldparelmoervlinder", "Argusvlinder",  "Heivlinder", "Kommavlinder", "Gentiaanblauwtje")
+
+for (vlinder in vlinders_2016){
+  aantallen_figuur %>%
+    filter(meetnet == vlinder) %>%
+    figuur_aantallen_jaar(legend_position = "bottom") %>%
+    print()
+}
+
+```
+
+
+```{r figuurAantallenVlinders2017, message=FALSE, warning= FALSE, fig.width= 5, fig.height= 6, fig.cap= "Verdeling van totaal getelde aantallen per bezoek - Aardbeivlinder, Klaverblauwtje, Bruin dikkopje en Oranje zandoogje"}
+
+vlinders_2017 <- c("Aardbeivlinder", "Klaverblauwtje",  "Bruin dikkopje", "Oranje zandoogje")
+
+aantallen_figuur %>%
+  filter(meetnet %in% vlinders_2017) %>%
+  figuur_aantallen(legend_position = "bottom")
+
+```
+
+Onderstaande figuren geven de evolutie van de getelde aantallen binnen het seizoen. De stippelijnen verbinden tellingen van eenzelfde locatie. De blauwe lijn toont de gemiddelde evolutie binnen het seizoen, waarbij de grijze banden aan beide kanten van de blauwe lijn de onzekerheid aangeven op deze gemiddelde evolutie.
+
+
+```{r figuurAantallenEvVlinders2016, message=FALSE, warning= FALSE, fig.width= 7, fig.height= 3.5}
+
+for(vlinder in c("Veldparelmoervlinder", "Argusvlinder",  "Heivlinder", "Kommavlinder")){
+  p <- aantallen_vlinders_locatie %>%
+  filter(meetnet == vlinder) %>%
+  ggplot(aes(x = datum, 
+             y = aantalTotaal, 
+ #            size = aantalSectiesGeteld, 
+             group= locatie, 
+             colour = Nulwaarneming)) + 
+  geom_point(alpha = 0.6) +  
+  geom_line(linetype = 2, colour = "black" , alpha =0.3, size = 0.4)  + 
+  facet_grid(meetnet ~ jaar, scales = "free_x") +
+  labs(x = "Datum bezoek", y = "Totaal aantal per transect", size = "Aantal getelde secties binnen transect") + 
+  theme(legend.position = "bottom")
+  print(p)
+  
+ q <- aantallen_vlinders_locatie %>%
+  filter(meetnet == vlinder) %>%
+  ggplot(aes(x = datum, 
+             y = aantalTotaal, 
+ #            size = aantalSectiesGeteld, 
+             colour = Nulwaarneming)) + 
+  geom_point(alpha = 0.6) + 
+  geom_smooth(method = "gam", method.args = list(family = poisson),formula = y ~ s(x, bs = "cs", k = 6) , size = 0.4, colour = "blue") +
+  facet_grid(meetnet ~ jaar, scales = "free_x") +
+  labs(x = "Datum bezoek", y = "Totaal aantal per transect", size = "Aantal getelde secties binnen transect") + 
+  theme(legend.position = "bottom")
+  print(q)
+}
+
+
+```
+
+```{r figuurAantallenEvVlinders2016_2, message=FALSE, warning= FALSE, fig.width= 7, fig.height= 3.5, fig.cap= paste("Evloutie totaal getelde aantallen per bezoek globale evolutie -",  c("Veldparelmoervlinder", "Argusvlinder",  "Heivlinder", "Kommavlinder"))}
+
+# for(vlinder in c("Veldparelmoervlinder", "Argusvlinder",  "Heivlinder", "Kommavlinder")){
+#   p <- aantallen_vlinders_locatie %>%
+#   filter(meetnet == vlinder) %>%
+#   ggplot(aes(x = datum, 
+#              y = aantalTotaal, 
+#  #            size = aantalSectiesGeteld, 
+#              colour = Nulwaarneming)) + 
+#   geom_point(alpha = 0.6) + 
+#   geom_smooth(method = "gam", method.args = list(family = poisson),formula = y ~ s(x, bs = "cs", k = 6) , size = 0.4, colour = "blue") +
+#   facet_grid(meetnet ~ jaar, scales = "free_x") +
+#   labs(x = "Datum bezoek", y = "Totaal aantal per transect", size = "Aantal getelde secties binnen transect") + 
+#   theme(legend.position = "bottom")
+#   print(p)
+# }
+
+
+```
+
+
+
+
+```{r figuurAantallenEvVlinders2017, message=FALSE, warning= FALSE, fig.width= 7, fig.height= 6, fig.cap= "Evloutie totaal getelde aantallen per bezoek waarbij bezoeken aan eenzelfde locatie met stippellijn worden verbonden - Aardbeivlinder, Klaverblauwtje, Bruin dikkopje en Oranje zandoogje"}
+
+aantallen_vlinders_locatie %>%
+  filter(meetnet !="Gentiaanblauwtje") %>%
+  filter(meetnet %in%  c("Aardbeivlinder", "Klaverblauwtje",  "Bruin dikkopje", "Oranje zandoogje") )%>%
+  ggplot(aes(x = datum, 
+             y = aantalTotaal, 
+ #            size = aantalSectiesGeteld, 
+             group= locatie, 
+             colour = Nulwaarneming)) + 
+  geom_point(alpha = 0.6) +  
+  geom_line(linetype = 2, colour = "black" , alpha =0.3, size = 0.4)  + 
+  facet_wrap(~ meetnet, scales = "free", ncol = 2) + 
+  labs(x = "Datum bezoek", y = "Totaal aantal per transect", size = "Aantal getelde secties binnen transect") + 
+  theme(legend.position = "bottom")
+```
+
+```{r figuurAantallenEvVlinders2017_2, message=FALSE, warning= FALSE, fig.width= 7, fig.height= 6, fig.cap= "Evloutie totaal getelde aantallen per bezoek en globale evolutie - Aardbeivlinder, Klaverblauwtje, Bruin dikkopje en Oranje zandoogje"}
+
+aantallen_vlinders_locatie %>%
+  filter(meetnet !="Gentiaanblauwtje") %>%
+  filter(meetnet %in%  c("Aardbeivlinder", "Klaverblauwtje",  "Bruin dikkopje", "Oranje zandoogje") )%>%
+  ggplot(aes(x = datum, 
+             y = aantalTotaal, 
+ #            size = aantalSectiesGeteld, 
+ #            group= locatie, 
+             colour = Nulwaarneming)) + 
+  geom_point(alpha = 0.6) + 
+  geom_smooth(method = "gam", method.args = list(family = poisson),formula = y ~ s(x, bs = "cs", k = 6) , size = 0.4, colour = "blue") +
+  #geom_line(linetype = 2, colour = "black" , alpha =0.3, size = 0.4)  + 
+  facet_wrap(~ meetnet, scales = "free", ncol = 2) + 
+  labs(x = "Datum bezoek", y = "Totaal aantal per transect", size = "Aantal getelde secties binnen transect") + 
+  theme(legend.position = "bottom")
+```
